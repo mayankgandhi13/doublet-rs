@@ -1,0 +1,20 @@
+[package]
+name = "doubletrs"
+publish = false
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+
+[lib]
+crate-type = ["rlib", "staticlib"]
+name = "doubletrs"
+
+[[bin]]
+name = "document"
+path = "document.rs"
+
+[dependencies]
+doublet_rs = { path = "../../../.." }
+extendr-api = "0.9"
+ndarray = "0.17"
+sprs = "0.11"

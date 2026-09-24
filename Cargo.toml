@@ -2,6 +2,7 @@
 name = "doublet_rs"
 version = "0.1.0"
 edition = "2024"
+exclude = ["bindings"]
 
 [dependencies]
 hnsw_rs = "0.3.4"

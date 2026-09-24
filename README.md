@@ -59,14 +59,29 @@ doublet-rs/
     └── vs_doubletfinder.rs
 ```
 
-### Planned API
+### R API
 
-The R binding (via `extendr`) is meant to drop into an existing Seurat workflow:
+The R package `doubletrs` (in `bindings/r/`, built with `extendr`) fits into an existing Seurat workflow. Normalization and PCA stay in Seurat; Rust does the simulation and neighbour search:
 
 ```r
-doublets <- simulate_doublets(expr, n = 0.25 * ncol(expr))
-index    <- build_knn_index(merged_pcs)
-pann     <- compute_pann(index, k = 30)
+library(doubletrs)
+
+n_real   <- ncol(counts)                                          # dgCMatrix, genes x cells
+doublets <- simulate_doublets(counts, n = round(n_real / 0.75 - n_real))  # pN = 0.25
+merged   <- cbind(counts, doublets)
+
+# ...normalize + PCA on `merged` with Seurat -> `pcs` (cells x PCs, real cells first)...
+
+pann     <- compute_pann(pcs, n_real = n_real, k = round(nrow(pcs) * 0.09))  # pK = 0.09
+calls    <- rank(-pann, ties.method = "first") <= round(0.075 * n_real)       # 7.5% doublet rate
+```
+
+`find_neighbors()` returns the neighbour indices themselves, and `method = "hnsw"` switches from exact to approximate search for large datasets.
+
+To install from a clone (needs Rust >= 1.85):
+
+```sh
+R CMD INSTALL bindings/r
 ```
 
 A PyO3 binding with the same API is planned for Scanpy / AnnData users.
@@ -126,7 +141,7 @@ flowchart TD
 - [x] HNSW kNN index + parallel queries
 - [x] pANN scoring + thresholding
 - [ ] Validate core against DoubletFinder reference outputs
-- [ ] R binding (extendr)
+- [x] R binding (extendr)
 - [ ] Python binding (PyO3)
 - [ ] Benchmark suite vs. DoubletFinder
 - [ ] Write-up of results

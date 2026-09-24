@@ -5,11 +5,15 @@
 //! drawn up front (two integers per doublet); expression columns are built
 //! in parallel, either all at once or in fixed-size batches so the full
 //! doublet matrix never has to exist in memory.
+//!
+//! Functions are generic over the sparse index type so callers can pass
+//! borrowed matrices without converting indices, e.g. R's `dgCMatrix`,
+//! which stores 32-bit `i` and `p` slots.
 
 use rand::{RngExt, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use rayon::prelude::*;
-use sprs::{CsMat, CsMatView};
+use sprs::{CsMatI, CsMatViewI, SpIndex};
 
 use crate::{Error, Result};
 
@@ -41,9 +45,9 @@ pub fn sample_pairs(n_cells: usize, n_doublets: usize, seed: u64) -> Result<Vec<
 
 /// Simulated doublets plus the parent cells each one was built from.
 #[derive(Debug, Clone)]
-pub struct Doublets {
+pub struct Doublets<I: SpIndex = usize> {
     /// genes × doublets, CSC.
-    pub matrix: CsMat<f64>,
+    pub matrix: CsMatI<f64, I>,
     pub pairs: Vec<(usize, usize)>,
 }
 
@@ -51,18 +55,21 @@ pub struct Doublets {
 ///
 /// `expr` should be CSC (columns = cells); a CSR matrix is converted first,
 /// which costs one copy.
-pub fn simulate_doublets(
-    expr: CsMatView<'_, f64>,
+pub fn simulate_doublets<I: SpIndex>(
+    expr: CsMatViewI<'_, f64, I>,
     n_doublets: usize,
     seed: u64,
-) -> Result<Doublets> {
+) -> Result<Doublets<I>> {
     let pairs = sample_pairs(expr.cols(), n_doublets, seed)?;
     let matrix = with_csc(expr, |csc| build_doublets(csc, &pairs))?;
     Ok(Doublets { matrix, pairs })
 }
 
 /// Builds the genes × `pairs.len()` doublet matrix for the given pairs.
-pub fn build_doublets(expr: CsMatView<'_, f64>, pairs: &[(usize, usize)]) -> Result<CsMat<f64>> {
+pub fn build_doublets<I: SpIndex>(
+    expr: CsMatViewI<'_, f64, I>,
+    pairs: &[(usize, usize)],
+) -> Result<CsMatI<f64, I>> {
     if !expr.is_csc() {
         return Err(Error::InvalidArgument(
             "expression matrix must be CSC".into(),
@@ -78,22 +85,27 @@ pub fn build_doublets(expr: CsMatView<'_, f64>, pairs: &[(usize, usize)]) -> Res
         )));
     }
 
-    let columns: Vec<(Vec<usize>, Vec<f64>)> = pairs
+    let columns: Vec<(Vec<I>, Vec<f64>)> = pairs
         .par_iter()
         .map(|&(a, b)| average_columns(expr, a, b))
         .collect();
 
+    let nnz: usize = columns.iter().map(|(idx, _)| idx.len()).sum();
+    if I::try_from_usize(nnz).is_none() {
+        return Err(Error::InvalidArgument(format!(
+            "{nnz} non-zeros do not fit the matrix index type"
+        )));
+    }
     let mut indptr = Vec::with_capacity(columns.len() + 1);
-    indptr.push(0);
-    let nnz = columns.iter().map(|(idx, _)| idx.len()).sum();
+    indptr.push(I::zero());
     let mut indices = Vec::with_capacity(nnz);
     let mut data = Vec::with_capacity(nnz);
     for (idx, vals) in columns {
         indices.extend(idx);
         data.extend(vals);
-        indptr.push(indices.len());
+        indptr.push(I::from_usize_unchecked(indices.len()));
     }
-    Ok(CsMat::new_csc(
+    Ok(CsMatI::new_csc(
         (expr.rows(), pairs.len()),
         indptr,
         indices,
@@ -105,16 +117,16 @@ pub fn build_doublets(expr: CsMatView<'_, f64>, pairs: &[(usize, usize)]) -> Res
 ///
 /// Each batch is built in parallel; peak memory is one batch rather than
 /// the whole doublet matrix.
-pub struct DoubletBatches<'a> {
-    expr: CsMatView<'a, f64>,
+pub struct DoubletBatches<'a, I: SpIndex = usize> {
+    expr: CsMatViewI<'a, f64, I>,
     pairs: Vec<(usize, usize)>,
     batch_size: usize,
     next: usize,
 }
 
-impl<'a> DoubletBatches<'a> {
+impl<'a, I: SpIndex> DoubletBatches<'a, I> {
     pub fn new(
-        expr: CsMatView<'a, f64>,
+        expr: CsMatViewI<'a, f64, I>,
         n_doublets: usize,
         batch_size: usize,
         seed: u64,
@@ -141,8 +153,8 @@ impl<'a> DoubletBatches<'a> {
     }
 }
 
-impl Iterator for DoubletBatches<'_> {
-    type Item = CsMat<f64>;
+impl<I: SpIndex> Iterator for DoubletBatches<'_, I> {
+    type Item = CsMatI<f64, I>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.next >= self.pairs.len() {
@@ -156,7 +168,10 @@ impl Iterator for DoubletBatches<'_> {
     }
 }
 
-fn with_csc<T>(expr: CsMatView<'_, f64>, f: impl FnOnce(CsMatView<'_, f64>) -> T) -> T {
+fn with_csc<I: SpIndex, T>(
+    expr: CsMatViewI<'_, f64, I>,
+    f: impl FnOnce(CsMatViewI<'_, f64, I>) -> T,
+) -> T {
     if expr.is_csc() {
         f(expr)
     } else {
@@ -166,7 +181,11 @@ fn with_csc<T>(expr: CsMatView<'_, f64>, f: impl FnOnce(CsMatView<'_, f64>) -> T
 }
 
 /// Merges two sorted sparse columns into their element-wise average.
-fn average_columns(expr: CsMatView<'_, f64>, a: usize, b: usize) -> (Vec<usize>, Vec<f64>) {
+fn average_columns<I: SpIndex>(
+    expr: CsMatViewI<'_, f64, I>,
+    a: usize,
+    b: usize,
+) -> (Vec<I>, Vec<f64>) {
     let col_a = expr.outer_view(a).expect("column index validated");
     let col_b = expr.outer_view(b).expect("column index validated");
     let (ia, va) = (col_a.indices(), col_a.data());
@@ -197,7 +216,7 @@ fn average_columns(expr: CsMatView<'_, f64>, a: usize, b: usize) -> (Vec<usize>,
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
-    use sprs::TriMat;
+    use sprs::{CsMat, TriMat};
 
     /// 3 genes × 3 cells:
     /// cell0 = [2, 0, 4], cell1 = [0, 6, 2], cell2 = [0, 0, 0]
@@ -272,6 +291,25 @@ mod tests {
                     assert_relative_eq!(*x, y);
                 }
                 col += 1;
+            }
+        }
+    }
+
+    #[test]
+    fn borrowed_i32_indices_match_usize() {
+        // Same matrix as `toy()`, laid out like R's dgCMatrix slots.
+        let p: Vec<i32> = vec![0, 2, 4, 4];
+        let i: Vec<i32> = vec![0, 2, 1, 2];
+        let x = vec![2.0, 4.0, 6.0, 2.0];
+        let view = CsMatViewI::new_csc((3, 3), &p, &i, &x);
+
+        let from_i32 = simulate_doublets(view, 20, 5).unwrap();
+        let from_usize = simulate_doublets(toy().view(), 20, 5).unwrap();
+        assert_eq!(from_i32.pairs, from_usize.pairs);
+        assert_eq!(from_i32.matrix.indptr().raw_storage().len(), 21);
+        for c in 0..20 {
+            for r in 0..3 {
+                assert_eq!(from_i32.matrix.get(r, c), from_usize.matrix.get(r, c));
             }
         }
     }

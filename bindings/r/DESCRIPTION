@@ -1,0 +1,16 @@
+Package: doubletrs
+Title: Memory-Efficient Doublet Detection for Single-Cell RNA-seq
+Version: 0.1.0
+Authors@R: person("Mayank", "Gandhi", email = "gandhi.may@northeastern.edu",
+    role = c("aut", "cre"))
+Description: R bindings to 'doublet-rs', a Rust reimplementation of the
+    'DoubletFinder' core engine: artificial doublet simulation,
+    nearest-neighbour search, and pANN scoring.
+License: MIT + file LICENSE
+SystemRequirements: Cargo (Rust's package manager), rustc >= 1.85
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Imports: Matrix, methods
+Suggests: testthat (>= 3.0.0)
+Config/testthat/edition: 3
