@@ -82,10 +82,50 @@ A PyO3 binding with the same API is planned for Scanpy / AnnData users.
 
 ## Roadmap
 
-- [ ] Sparse matrix I/O
-- [ ] Artificial doublet simulation (batched, parallel)
-- [ ] HNSW kNN index + parallel queries
-- [ ] pANN scoring + thresholding
+### Build plan
+
+```mermaid
+flowchart TD
+    subgraph P0["Phase 0: Setup"]
+        direction LR
+        A1["cargo init + crate layout"] --> A2["CI: test, clippy, fmt"]
+        A3["Pick datasets with<br/>known doublets"] --> A4["Run DoubletFinder in R,<br/>save reference outputs"]
+    end
+
+    subgraph P1["Phase 1: Rust core"]
+        B1["io.rs<br/>read sparse matrix"] --> B2["simulate.rs<br/>make artificial doublets<br/>(batched, rayon)"]
+        B2 --> B3["Re-embed merged matrix in PCA<br/>(decide: Rust or R/Python)"]
+        B3 --> B4["knn.rs<br/>exact kNN first, then HNSW"]
+        B4 --> B5["score.rs<br/>pANN + doublet calls"]
+        B5 --> V1{"Matches R<br/>reference?"}
+        V1 -- No --> B2
+        V1 -- Yes --> V2{"HNSW gives same<br/>results as exact?"}
+        V2 -- No --> B4
+    end
+
+    subgraph P2["Phase 2: Bindings"]
+        direction LR
+        C1["R binding<br/>(extendr, Seurat)"] --> C2["Python binding<br/>(PyO3, AnnData)"]
+    end
+
+    subgraph P3["Phase 3: Benchmark + write-up"]
+        direction LR
+        E1["Run side by side<br/>vs DoubletFinder"] --> E2["Measure AUPRC,<br/>peak memory, time"]
+        E2 --> E3["Test on 16 GB laptop"] --> E4["Write up results"]
+    end
+
+    P0 --> P1
+    V2 -- Yes --> P2
+    P2 --> P3
+```
+
+### Checklist
+
+- [x] Sparse matrix I/O
+- [x] Artificial doublet simulation (batched, parallel)
+- [x] HNSW kNN index + parallel queries
+- [x] pANN scoring + thresholding
+- [ ] Validate core against DoubletFinder reference outputs
 - [ ] R binding (extendr)
 - [ ] Python binding (PyO3)
 - [ ] Benchmark suite vs. DoubletFinder

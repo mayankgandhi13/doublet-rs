@@ -1,0 +1,16 @@
+[package]
+name = "doublet_rs"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+hnsw_rs = "0.3.4"
+ndarray = "0.17"
+rand = "0.10.3"
+rand_chacha = "0.10.0"
+rayon = "1.12.0"
+sprs = "0.11.5"
+thiserror = "2.0.21"
+
+[dev-dependencies]
+approx = "0.5.1"
