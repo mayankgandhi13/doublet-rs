@@ -1,0 +1,18 @@
+# Conda environment for running the validation on an HPC cluster.
+# Everything comes prebuilt from conda-forge, so no system libraries or
+# compilers are needed on the compute nodes.
+name: doubletrs
+channels:
+  - conda-forge
+dependencies:
+  - r-base=4.4
+  - r-seurat>=5
+  - r-prroc
+  - r-remotes
+  - r-testthat
+  - r-fields
+  - r-rocr
+  - r-kernsmooth
+  - rust>=1.85
+  - compilers
+  - make
