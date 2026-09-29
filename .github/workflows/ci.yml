@@ -58,6 +58,7 @@ jobs:
           - {os: ubuntu-latest, r: devel}
           - {os: macos-latest, r: release}
           - {os: windows-latest, r: release}
+          - {os: windows-latest, r: devel}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
