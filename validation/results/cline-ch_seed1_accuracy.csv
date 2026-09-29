@@ -1,0 +1,4 @@
+"dataset","seed","method","auprc","auroc","precision_at_n","total_seconds"
+"cline-ch",1,"DoubletFinder",0.37908526892525,0.583720625663699,0.315358361774744,21.882
+"cline-ch",1,"doubletrs (exact)",0.378713092398439,0.583785266428827,0.308532423208191,10.892
+"cline-ch",1,"doubletrs (hnsw)",0.37829968068807,0.583459800965351,0.308532423208191,11.675

@@ -1,0 +1,4 @@
+"dataset","seed","method","auprc","auroc","precision_at_n","total_seconds"
+"nuc-MULTI",3,"DoubletFinder",0.252646221663551,0.735464999948431,0.305263157894737,10.816
+"nuc-MULTI",3,"doubletrs (exact)",0.265878267706262,0.73740833565395,0.309473684210526,6.166
+"nuc-MULTI",3,"doubletrs (hnsw)",0.26569857842363,0.737063646771249,0.311578947368421,6.928

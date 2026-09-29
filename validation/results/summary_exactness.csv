@@ -1,0 +1,17 @@
+"dataset","runs","cells_identical_pann","cells","max_abs_diff","all_calls_identical"
+"cline-ch",3,7954,7954,0,TRUE
+"HEK-HMEC-MULTI",3,10641,10641,0,TRUE
+"hm-12k",3,12820,12820,0,TRUE
+"hm-6k",3,6806,6806,0,TRUE
+"HMEC-orig-MULTI",3,26426,26426,0,TRUE
+"HMEC-rep-MULTI",3,10580,10580,0,TRUE
+"J293t-dm",3,500,500,0,TRUE
+"mkidney-ch",3,21179,21179,0,TRUE
+"nuc-MULTI",3,5578,5578,0,TRUE
+"pbmc-1A-dm",3,3298,3298,0,TRUE
+"pbmc-1B-dm",3,3790,3790,0,TRUE
+"pbmc-1C-dm",3,5270,5270,0,TRUE
+"pbmc-2ctrl-dm",3,13913,13913,0,TRUE
+"pbmc-2stim-dm",3,13916,13916,0,TRUE
+"pbmc-ch",3,15272,15272,0,TRUE
+"pdx-MULTI",3,10296,10296,0,TRUE

@@ -1,0 +1,4 @@
+"dataset","seed","method","auprc","auroc","precision_at_n","total_seconds"
+"pbmc-2ctrl-dm",2,"DoubletFinder",0.318439961748701,0.769415509744468,0.339173967459324,37.715
+"pbmc-2ctrl-dm",2,"doubletrs (exact)",0.296290534083818,0.756982261119131,0.299749687108886,9.74300000000001
+"pbmc-2ctrl-dm",2,"doubletrs (hnsw)",0.295572224842877,0.755729705778183,0.298498122653317,13.406

@@ -1,0 +1,4 @@
+"dataset","seed","method","auprc","auroc","precision_at_n","total_seconds"
+"HMEC-rep-MULTI",1,"DoubletFinder",0.584151745286618,0.715642816335112,0.528641072516758,23.161
+"HMEC-rep-MULTI",1,"doubletrs (exact)",0.592574447520023,0.719783570799576,0.535344302254723,8.703
+"HMEC-rep-MULTI",1,"doubletrs (hnsw)",0.592591991896287,0.719753782100194,0.535039609993906,11.593

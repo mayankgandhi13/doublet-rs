@@ -1,0 +1,49 @@
+"dataset","method","auprc"
+"cline-ch","DoubletFinder",0.377995098072447
+"HEK-HMEC-MULTI","DoubletFinder",0.451183419809226
+"hm-12k","DoubletFinder",0.985962880345887
+"hm-6k","DoubletFinder",0.980238430544938
+"HMEC-orig-MULTI","DoubletFinder",0.424672644392015
+"HMEC-rep-MULTI","DoubletFinder",0.586409411924355
+"J293t-dm","DoubletFinder",0.215736734400327
+"mkidney-ch","DoubletFinder",0.448032613383715
+"nuc-MULTI","DoubletFinder",0.252384541390595
+"pbmc-1A-dm","DoubletFinder",0.202654635813967
+"pbmc-1B-dm","DoubletFinder",0.128387951907125
+"pbmc-1C-dm","DoubletFinder",0.263195819557401
+"pbmc-2ctrl-dm","DoubletFinder",0.314414024108777
+"pbmc-2stim-dm","DoubletFinder",0.2984809449906
+"pbmc-ch","DoubletFinder",0.404308764004446
+"pdx-MULTI","DoubletFinder",0.255963197954352
+"cline-ch","doubletrs (exact)",0.377274080520885
+"HEK-HMEC-MULTI","doubletrs (exact)",0.446846333634547
+"hm-12k","doubletrs (exact)",0.98648671583288
+"hm-6k","doubletrs (exact)",0.979659172500574
+"HMEC-orig-MULTI","doubletrs (exact)",0.426811371394817
+"HMEC-rep-MULTI","doubletrs (exact)",0.589506332222937
+"J293t-dm","doubletrs (exact)",0.229628631034634
+"mkidney-ch","doubletrs (exact)",0.447729535381427
+"nuc-MULTI","doubletrs (exact)",0.264462415421836
+"pbmc-1A-dm","doubletrs (exact)",0.194121602365152
+"pbmc-1B-dm","doubletrs (exact)",0.134277301343064
+"pbmc-1C-dm","doubletrs (exact)",0.260688835742318
+"pbmc-2ctrl-dm","doubletrs (exact)",0.310154229773168
+"pbmc-2stim-dm","doubletrs (exact)",0.300884091176522
+"pbmc-ch","doubletrs (exact)",0.406105851709313
+"pdx-MULTI","doubletrs (exact)",0.259850891251696
+"cline-ch","doubletrs (hnsw)",0.376853860824813
+"HEK-HMEC-MULTI","doubletrs (hnsw)",0.446508407764614
+"hm-12k","doubletrs (hnsw)",0.986621597179663
+"hm-6k","doubletrs (hnsw)",0.979948401844246
+"HMEC-orig-MULTI","doubletrs (hnsw)",0.426282302909124
+"HMEC-rep-MULTI","doubletrs (hnsw)",0.589234867229132
+"J293t-dm","doubletrs (hnsw)",0.229824399060925
+"mkidney-ch","doubletrs (hnsw)",0.447235671844899
+"nuc-MULTI","doubletrs (hnsw)",0.264092269666152
+"pbmc-1A-dm","doubletrs (hnsw)",0.194076229609538
+"pbmc-1B-dm","doubletrs (hnsw)",0.134031749370526
+"pbmc-1C-dm","doubletrs (hnsw)",0.260195224797647
+"pbmc-2ctrl-dm","doubletrs (hnsw)",0.308590853235059
+"pbmc-2stim-dm","doubletrs (hnsw)",0.299881144422173
+"pbmc-ch","doubletrs (hnsw)",0.406236326607004
+"pdx-MULTI","doubletrs (hnsw)",0.259806152852704

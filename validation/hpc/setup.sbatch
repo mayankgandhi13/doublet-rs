@@ -24,6 +24,9 @@ else
 fi
 conda activate doubletrs
 export NOT_CRAN=true
+# The extendr `document` helper run during the build links to libR.so,
+# which conda keeps outside the default library search path.
+export LD_LIBRARY_PATH="$CONDA_PREFIX/lib/R/lib:${LD_LIBRARY_PATH:-}"
 
 # Install into the environment's own library, not ~/R.
 R_LIB=$(Rscript -e 'cat(file.path(R.home(), "library"))')

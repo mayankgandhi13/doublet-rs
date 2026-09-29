@@ -1,0 +1,4 @@
+"dataset","seed","method","auprc","auroc","precision_at_n","total_seconds"
+"mkidney-ch",1,"DoubletFinder",0.449221515385928,0.581981429742697,0.448424250094925,96.352
+"mkidney-ch",1,"doubletrs (exact)",0.44824515018592,0.58185162736202,0.447158587520567,27.068
+"mkidney-ch",1,"doubletrs (hnsw)",0.447672207624935,0.581688467652084,0.446525756233388,34.619
