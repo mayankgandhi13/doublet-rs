@@ -8,6 +8,10 @@ This is a new submission.
 
 * New submission.
 
+Possibly misspelled words in DESCRIPTION: "pANN" is the method's score
+(proportion of artificial nearest neighbours), defined in the Description;
+McGinnis, Murrow and Gartner are the authors of the cited paper.
+
 ## Rust
 
 The package uses Rust through the 'extendr' framework, following the CRAN
@@ -28,7 +32,10 @@ policy for packages using Rust:
 
 ## Test environments
 
-* GitHub Actions: ubuntu-latest, macos-latest and windows-latest (R release),
-  `R CMD check --as-cran`
-* GitHub Actions: installation with the minimum supported rustc, 1.71
+`R CMD check --as-cran` on:
+
+* GitHub Actions: ubuntu-latest (R release, with PDF manual; R devel),
+  macos-latest (R release), windows-latest (R release; R devel)
 * Local: macOS 15 (arm64), R 4.4.2
+
+Also on GitHub Actions: installation with the minimum supported rustc, 1.71.
