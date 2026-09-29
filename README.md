@@ -203,6 +203,10 @@ Based on the DoubletFinder method:
 
 This is an independent reimplementation and is not affiliated with the original authors.
 
+## License
+
+MIT; see [LICENSE](LICENSE). DoubletFinder itself is released under CC0.
+
 ## Author
 
 **Mayank Gandhi**, MS Bioinformatics, Northeastern University
