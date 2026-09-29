@@ -46,7 +46,7 @@ test_that("exact neighbours match a brute-force R computation", {
   pcs <- matrix(rnorm(60 * 5), 60, 5)
   n_real <- 40
   k <- 6
-  nn <- find_neighbors(pcs, n_real, k, method = "exact")
+  nn <- find_neighbors(pcs, n_real, k)
 
   d <- as.matrix(dist(pcs))
   expected <- t(sapply(seq_len(n_real), function(i) order(d[i, ])[2:(k + 1)]))
@@ -64,13 +64,23 @@ test_that("pANN is the share of neighbours that are artificial", {
   expect_equal(names(pann), rownames(pcs)[1:60])
 })
 
-test_that("HNSW agrees closely with exact search", {
-  set.seed(4)
-  pcs <- matrix(rnorm(2000 * 10), 2000, 10)
-  exact <- find_neighbors(pcs, 500, 15, method = "exact")
-  approx <- find_neighbors(pcs, 500, 15, method = "hnsw")
-  recall <- mean(sapply(1:500, function(i) mean(approx[i, ] %in% exact[i, ])))
-  expect_gt(recall, 0.95)
+test_that("thread count does not change results", {
+  counts <- toy_counts()
+  expect_identical(
+    simulate_doublets(counts, 30, seed = 2, threads = 1),
+    simulate_doublets(counts, 30, seed = 2, threads = 2)
+  )
+  set.seed(6)
+  pcs <- matrix(rnorm(300 * 5), 300, 5)
+  expect_identical(compute_pann(pcs, 200, 12, threads = 1), compute_pann(pcs, 200, 12, threads = 2))
+})
+
+test_that("doubletrs_threads() respects the option", {
+  old <- options(doubletrs.threads = 1L)
+  on.exit(options(old))
+  expect_identical(doubletrs_threads(), 1L)
+  options(doubletrs.threads = 0)
+  expect_error(doubletrs_threads(), "at least 1")
 })
 
 test_that("true doublets get high pANN on two-cell-type data", {
@@ -101,15 +111,11 @@ test_that("bad arguments give clear errors", {
   pcs <- matrix(rnorm(20), 10, 2)
   expect_error(find_neighbors(pcs, 11, 2), "n_real")
   expect_error(find_neighbors(pcs, 5, 0), "k must be")
-  expect_error(find_neighbors(pcs, 5, 2, method = "fast"), "should be one of")
   expect_error(find_neighbors(pcs, -1, 2), "non-negative")
+  expect_error(find_neighbors(pcs, 5, 2, threads = 0), "at least 1")
   pcs[1, 1] <- NA
   expect_error(find_neighbors(pcs, 5, 2), "NaN")
   expect_error(find_neighbors(as.data.frame(pcs), 5, 2), "numeric matrix")
   expect_error(simulate_doublets("x", 5), "matrix")
-  expect_error(hnsw_params(max_connections = 1.5), "whole number")
-  expect_error(
-    find_neighbors(matrix(rnorm(20), 10, 2), 5, 2, "hnsw", hnsw_params(max_connections = 300)),
-    "max_connections"
-  )
+  expect_error(simulate_doublets(toy_counts(), 5, seed = 1.5), "whole number")
 })

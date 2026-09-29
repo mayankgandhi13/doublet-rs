@@ -8,14 +8,19 @@ NULL
 #' Simulate doublets from dgCMatrix slots.
 #' Returns the doublet matrix slots and 1-based parent cell indices.
 #' @noRd
-rs_simulate_doublets <- function(i, p, x, n_genes, n_cells, n_doublets, seed) .Call(wrap__rs_simulate_doublets, i, p, x, n_genes, n_cells, n_doublets, seed)
+rs_simulate_doublets <- function(i, p, x, n_genes, n_cells, n_doublets, seed, threads) .Call(wrap__rs_simulate_doublets, i, p, x, n_genes, n_cells, n_doublets, seed, threads)
 
 #' k nearest neighbours of the first `n_real` rows, 1-based.
 #' @noRd
-rs_find_neighbors <- function(pcs, n_real, k, method, max_connections, ef_construction, ef_search) .Call(wrap__rs_find_neighbors, pcs, n_real, k, method, max_connections, ef_construction, ef_search)
+rs_find_neighbors <- function(pcs, n_real, k, threads) .Call(wrap__rs_find_neighbors, pcs, n_real, k, threads)
 
 #' pANN for the first `n_real` rows.
 #' @noRd
-rs_compute_pann <- function(pcs, n_real, k, method, max_connections, ef_construction, ef_search) .Call(wrap__rs_compute_pann, pcs, n_real, k, method, max_connections, ef_construction, ef_search)
+rs_compute_pann <- function(pcs, n_real, k, threads) .Call(wrap__rs_compute_pann, pcs, n_real, k, threads)
+
+#' pANN for the first `n_real` rows at each k in `ks`: an n_real x length(ks)
+#' matrix.
+#' @noRd
+rs_pann_sweep <- function(pcs, n_real, ks, threads) .Call(wrap__rs_pann_sweep, pcs, n_real, ks, threads)
 
 # nolint end

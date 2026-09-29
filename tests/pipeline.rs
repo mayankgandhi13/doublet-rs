@@ -5,14 +5,12 @@
 //! used directly as the embedding. True doublets should sit among the
 //! artificial doublets and get the highest pANN.
 
-use doublet_rs::knn::HnswParams;
 use doublet_rs::{
-    KnnMethod, call_doublets, k_from_pk, n_doublets_for_pn, pann_from_embedding, simulate_doublets,
+    call_doublets, k_from_pk, n_doublets_for_pn, pann_from_embedding, simulate_doublets, CscMatrix,
+    Embedding, KnnMethod,
 };
-use ndarray::Array2;
-use rand::{RngExt, SeedableRng};
+use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
-use sprs::{CsMat, TriMat};
 
 const GENES: usize = 20;
 const N_A: usize = 300;
@@ -29,58 +27,57 @@ fn profile(rng: &mut ChaCha8Rng, a: f64, b: f64) -> Vec<f64> {
         .collect()
 }
 
-fn synthetic_cells() -> (CsMat<f64>, Vec<bool>) {
+/// Dense cells (each a GENES-long vector) and which are true doublets.
+fn synthetic_cells() -> (Vec<Vec<f64>>, Vec<bool>) {
     let mut rng = ChaCha8Rng::seed_from_u64(0);
     let mut cells = Vec::new();
     let mut is_doublet = Vec::new();
-    for _ in 0..N_A {
-        cells.push(profile(&mut rng, 1.0, 0.0));
-        is_doublet.push(false);
-    }
-    for _ in 0..N_B {
-        cells.push(profile(&mut rng, 0.0, 1.0));
-        is_doublet.push(false);
-    }
-    for _ in 0..N_TRUE_DOUBLETS {
-        cells.push(profile(&mut rng, 0.5, 0.5));
-        is_doublet.push(true);
-    }
-
-    let mut tri = TriMat::new((GENES, cells.len()));
-    for (c, cell) in cells.iter().enumerate() {
-        for (g, &v) in cell.iter().enumerate() {
-            if v > 0.0 {
-                tri.add_triplet(g, c, v);
-            }
+    for (n, a, b, doublet) in [
+        (N_A, 1.0, 0.0, false),
+        (N_B, 0.0, 1.0, false),
+        (N_TRUE_DOUBLETS, 0.5, 0.5, true),
+    ] {
+        for _ in 0..n {
+            cells.push(profile(&mut rng, a, b));
+            is_doublet.push(doublet);
         }
     }
-    (tri.to_csc(), is_doublet)
+    (cells, is_doublet)
 }
 
-/// Stacks real cells and artificial doublets into a points × genes array.
-fn merged_embedding(real: &CsMat<f64>, doublets: &CsMat<f64>) -> Array2<f64> {
-    let n = real.cols() + doublets.cols();
-    let mut emb = Array2::zeros((n, GENES));
-    for (offset, m) in [(0, real), (real.cols(), doublets)] {
-        for (c, col) in m.outer_iterator().enumerate() {
-            for (g, &v) in col.iter() {
-                emb[[offset + c, g]] = v;
-            }
-        }
-    }
-    emb
+fn to_csc(cells: &[Vec<f64>]) -> CscMatrix<usize> {
+    let triplets = cells
+        .iter()
+        .enumerate()
+        .flat_map(|(c, cell)| {
+            cell.iter()
+                .enumerate()
+                .filter(|(_, v)| **v > 0.0)
+                .map(move |(g, &v)| (g, c, v))
+        })
+        .collect();
+    CscMatrix::from_triplets(GENES, cells.len(), triplets).unwrap()
 }
 
 fn run(method: KnnMethod) -> (Vec<f64>, Vec<bool>) {
-    let (expr, is_doublet) = synthetic_cells();
-    let n_real = expr.cols();
+    let (cells, is_doublet) = synthetic_cells();
+    let expr = to_csc(&cells);
+    let n_real = cells.len();
 
     let n_sim = n_doublets_for_pn(n_real, 0.25).unwrap();
     let doublets = simulate_doublets(expr.view(), n_sim, 1).unwrap();
-    let emb = merged_embedding(&expr, &doublets.matrix);
 
-    let k = k_from_pk(emb.nrows(), 0.02);
-    let pann = pann_from_embedding(emb.view(), n_real, k, method).unwrap();
+    // Row-major merged embedding: real cells, then artificial doublets.
+    let mut merged: Vec<f64> = cells.concat();
+    let dv = doublets.matrix.view();
+    for c in 0..n_sim {
+        merged.extend((0..GENES).map(|g| dv.get(g, c)));
+    }
+    let n_points = n_real + n_sim;
+    let emb = Embedding::new(&merged, n_points, GENES).unwrap();
+
+    let k = k_from_pk(n_points, 0.02);
+    let pann = pann_from_embedding(emb, n_real, k, method).unwrap();
     (pann, is_doublet)
 }
 
@@ -120,8 +117,9 @@ fn exact_pipeline_finds_true_doublets() {
     check(&pann, &is_doublet);
 }
 
+#[cfg(feature = "hnsw")]
 #[test]
 fn hnsw_pipeline_finds_true_doublets() {
-    let (pann, is_doublet) = run(KnnMethod::Hnsw(HnswParams::default()));
+    let (pann, is_doublet) = run(KnnMethod::Hnsw(doublet_rs::knn::HnswParams::default()));
     check(&pann, &is_doublet);
 }

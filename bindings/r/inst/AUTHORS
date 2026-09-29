@@ -1,0 +1,51 @@
+The doubletrs package bundles the following Rust crates in
+src/rust/vendor.tar.xz. Each is listed with its authors and license.
+
+crossbeam-deque 0.8.8 (MIT OR Apache-2.0): The crossbeam-deque developers
+  https://github.com/crossbeam-rs/crossbeam
+crossbeam-epoch 0.9.21 (MIT OR Apache-2.0): The crossbeam-epoch developers
+  https://github.com/crossbeam-rs/crossbeam
+crossbeam-utils 0.8.23 (MIT OR Apache-2.0): The crossbeam-utils developers
+  https://github.com/crossbeam-rs/crossbeam
+either 1.18.0 (MIT OR Apache-2.0): The either developers
+  https://github.com/rayon-rs/either
+extendr-api 0.9.0 (MIT): The extendr-api developers
+  https://github.com/extendr/extendr
+extendr-ffi 0.9.0 (MIT): The extendr-ffi developers
+  https://github.com/extendr/extendr
+extendr-macros 0.9.0 (MIT): The extendr-macros developers
+  https://github.com/extendr/extendr
+lazy_static 1.5.0 (MIT OR Apache-2.0): Marvin Löbel
+  https://github.com/rust-lang-nursery/lazy-static.rs
+once_cell 1.21.4 (MIT OR Apache-2.0): Aleksey Kladov
+  https://github.com/matklad/once_cell
+paste 1.0.15 (MIT OR Apache-2.0): David Tolnay
+  https://github.com/dtolnay/paste
+ppv-lite86 0.2.21 (MIT OR Apache-2.0): The CryptoCorrosion Contributors
+  https://github.com/cryptocorrosion/cryptocorrosion
+proc-macro2 1.0.107 (MIT OR Apache-2.0): David Tolnay, Alex Crichton
+  https://github.com/dtolnay/proc-macro2
+quote 1.0.47 (MIT OR Apache-2.0): David Tolnay
+  https://github.com/dtolnay/quote
+rand 0.9.5 (MIT OR Apache-2.0): The Rand Project Developers, The Rust Project Developers
+  https://github.com/rust-random/rand
+rand_chacha 0.9.0 (MIT OR Apache-2.0): The Rand Project Developers, The Rust Project Developers, The CryptoCorrosion Contributors
+  https://github.com/rust-random/rand
+rand_core 0.9.5 (MIT OR Apache-2.0): The Rand Project Developers, The Rust Project Developers
+  https://github.com/rust-random/rand
+rayon 1.10.0 (MIT OR Apache-2.0): Niko Matsakis, Josh Stone
+  https://github.com/rayon-rs/rayon
+rayon-core 1.12.1 (MIT OR Apache-2.0): Niko Matsakis, Josh Stone
+  https://github.com/rayon-rs/rayon
+readonly 0.2.14 (MIT OR Apache-2.0): David Tolnay
+  https://github.com/dtolnay/readonly
+syn 2.0.119 (MIT OR Apache-2.0): David Tolnay
+  https://github.com/dtolnay/syn
+syn 3.0.6 (MIT OR Apache-2.0): David Tolnay
+  https://github.com/dtolnay/syn
+unicode-ident 1.0.26 ((MIT OR Apache-2.0) AND Unicode-3.0): David Tolnay
+  https://github.com/dtolnay/unicode-ident
+zerocopy 0.8.59 (BSD-2-Clause OR Apache-2.0 OR MIT): The zerocopy developers
+  https://github.com/google/zerocopy
+zerocopy-derive 0.8.59 (BSD-2-Clause OR Apache-2.0 OR MIT): The zerocopy-derive developers
+  https://github.com/google/zerocopy

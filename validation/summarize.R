@@ -28,7 +28,8 @@ write.csv(ex, file.path(dir, "summary_exactness.csv"), row.names = FALSE)
 
 # Accuracy: mean (sd) over seeds per dataset and method.
 fmt <- function(x) sprintf("%.3f (%.3f)", mean(x), if (length(x) > 1) sd(x) else 0)
-methods <- c("DoubletFinder", "doubletrs (exact)", "doubletrs (hnsw)")
+# "doubletrs (hnsw)" appears only in results from before HNSW was removed.
+methods <- intersect(c("DoubletFinder", "doubletrs (exact)", "doubletrs (hnsw)"), unique(acc$method))
 datasets <- sort(unique(acc$dataset))
 auprc <- sapply(methods, function(m) {
   sapply(datasets, function(d) fmt(acc$auprc[acc$dataset == d & acc$method == m]))

@@ -30,7 +30,7 @@ Steps 3, 5, and 6 are where memory and time blow up.
 | Step | Rust approach |
 |---|---|
 | Doublet simulation | Batched generation with `rayon`, streamed instead of materialized all at once |
-| kNN search | HNSW approximate-nearest-neighbour index (`hnsw_rs`), queried in parallel |
+| kNN search | Exact search, parallel over cells with `rayon`, without DoubletFinder's dense cells × cells distance matrix |
 | pANN scoring & thresholding | Parallel per-cell reduction, no round-trips back to R |
 
 **Stays in R/Python:** normalization and QC (Seurat / Scanpy), initial PCA (`irlba`), and visualization.
@@ -39,7 +39,7 @@ Steps 3, 5, and 6 are where memory and time blow up.
 
 - **Expression matrix:** sparse (`sprs`), since scRNA-seq matrices are typically over 90% zeros
 - **PCA embedding:** dense `ndarray::Array2<f64>` (cells × ~30 PCs)
-- **kNN index:** `hnsw_rs::Hnsw`, built once on the merged embedding and read concurrently
+- **kNN search:** exact, parallel brute force over the embedding. An HNSW index (`hnsw_rs`) is available behind the `hnsw` cargo feature, but was slower on every benchmark dataset
 
 ### Planned crate structure
 
@@ -76,13 +76,15 @@ pann     <- compute_pann(pcs, n_real = n_real, k = round(nrow(pcs) * 0.09))  # p
 calls    <- rank(-pann, ties.method = "first") <= round(0.075 * n_real)       # 7.5% doublet rate
 ```
 
-`find_neighbors()` returns the neighbour indices themselves, and `method = "hnsw"` switches from exact to approximate search for large datasets.
+`find_neighbors()` returns the neighbour indices themselves. Every function takes a `threads` argument, defaulting to `doubletrs_threads()` (all cores, or `options(doubletrs.threads = n)`).
 
-To install from a clone (needs Rust >= 1.85):
+To install from a clone (needs Rust >= 1.71):
 
 ```sh
 R CMD INSTALL bindings/r
 ```
+
+`scripts/build-r-package.sh` builds the self-contained CRAN tarball in `dist/`, with the core crate bundled and all Rust dependencies vendored for an offline build.
 
 A PyO3 binding with the same API is planned for Scanpy / AnnData users.
 

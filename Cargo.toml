@@ -1,17 +1,21 @@
 [package]
 name = "doublet_rs"
 version = "0.1.0"
-edition = "2024"
-exclude = ["bindings"]
+edition = "2021"
+rust-version = "1.71"
+description = "Memory-efficient reimplementation of the DoubletFinder doublet-detection engine for single-cell RNA-seq"
+license = "MIT"
+repository = "https://github.com/mayankgandhi13/doublet-rs"
+exclude = ["bindings", "validation"]
+
+[features]
+default = []
+# Approximate kNN with an HNSW graph. Off by default: on the benchmark
+# datasets it was slower than exact search, and it adds ~85 dependencies.
+hnsw = ["dep:hnsw_rs"]
 
 [dependencies]
-hnsw_rs = "0.3.4"
-ndarray = "0.17"
-rand = "0.10.3"
-rand_chacha = "0.10.0"
-rayon = "1.12.0"
-sprs = "0.11.5"
-thiserror = "2.0.21"
-
-[dev-dependencies]
-approx = "0.5.1"
+hnsw_rs = { version = "0.3.4", optional = true }
+rand = { version = "0.9", default-features = false }
+rand_chacha = { version = "0.9", default-features = false }
+rayon = "1.10"

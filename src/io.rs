@@ -1,28 +1,25 @@
 //! Matrix Market (`.mtx`) reading, e.g. 10x Genomics `matrix.mtx(.gz)` output.
 //!
-//! `sprs::io::read_matrix_market` rejects `integer` files when asked for
-//! `f64` values, and 10x count matrices are always `integer`, so we parse
-//! the coordinate format ourselves and stream entries straight into a
-//! triplet matrix.
+//! Parses the coordinate format directly, accepting the `integer` fields
+//! that 10x count matrices always use.
 
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 
-use sprs::{CsMat, TriMat};
-
+use crate::matrix::CscMatrix;
 use crate::{Error, Result};
 
 /// Reads a `coordinate` Matrix Market file into a CSC matrix.
 ///
 /// 10x files are gene × cell, so columns are cells. Supports `integer`,
 /// `real`, and `pattern` fields with `general` symmetry.
-pub fn read_mtx<P: AsRef<Path>>(path: P) -> Result<CsMat<f64>> {
+pub fn read_mtx<P: AsRef<Path>>(path: P) -> Result<CscMatrix<usize>> {
     let file = File::open(path)?;
     read_mtx_from(BufReader::new(file))
 }
 
-pub fn read_mtx_from<R: BufRead>(reader: R) -> Result<CsMat<f64>> {
+pub fn read_mtx_from<R: BufRead>(reader: R) -> Result<CscMatrix<usize>> {
     let mut lines = reader.lines();
 
     let header = lines
@@ -69,7 +66,7 @@ pub fn read_mtx_from<R: BufRead>(reader: R) -> Result<CsMat<f64>> {
         return Err(Error::Parse(format!("bad size line: {size_line}")));
     };
 
-    let mut tri = TriMat::with_capacity((n_rows, n_cols), nnz);
+    let mut triplets = Vec::with_capacity(nnz);
     for line in lines {
         let line = line?;
         if line.trim().is_empty() || line.starts_with('%') {
@@ -96,16 +93,16 @@ pub fn read_mtx_from<R: BufRead>(reader: R) -> Result<CsMat<f64>> {
                 .and_then(|s| s.parse::<f64>().ok())
                 .ok_or_else(|| Error::Parse(format!("bad value: {line}")))?
         };
-        tri.add_triplet(row, col, value);
+        triplets.push((row, col, value));
     }
-    if tri.nnz() != nnz {
+    if triplets.len() != nnz {
         return Err(Error::Parse(format!(
             "expected {nnz} entries, found {}",
-            tri.nnz()
+            triplets.len()
         )));
     }
 
-    Ok(tri.to_csc())
+    CscMatrix::from_triplets(n_rows, n_cols, triplets)
 }
 
 #[cfg(test)]
@@ -121,12 +118,12 @@ mod tests {
                    3 1 2\n\
                    2 2 7\n";
         let m = read_mtx_from(mtx.as_bytes()).unwrap();
-        assert_eq!(m.shape(), (3, 2));
-        assert!(m.is_csc());
-        assert_eq!(m.get(0, 0), Some(&5.0));
-        assert_eq!(m.get(2, 0), Some(&2.0));
-        assert_eq!(m.get(1, 1), Some(&7.0));
-        assert_eq!(m.get(0, 1), None);
+        let v = m.view();
+        assert_eq!((v.n_rows(), v.n_cols(), v.nnz()), (3, 2, 3));
+        assert_eq!(v.get(0, 0), 5.0);
+        assert_eq!(v.get(2, 0), 2.0);
+        assert_eq!(v.get(1, 1), 7.0);
+        assert_eq!(v.get(0, 1), 0.0);
     }
 
     #[test]

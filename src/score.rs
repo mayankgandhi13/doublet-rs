@@ -2,6 +2,8 @@
 
 use rayon::prelude::*;
 
+use crate::round_half_even;
+
 /// pANN for each real cell: the fraction of its `k` neighbours that are
 /// artificial doublets (point index ≥ `n_real`).
 ///
@@ -17,7 +19,7 @@ pub fn compute_pann(neighbors: &[Vec<usize>], n_real: usize, k: usize) -> Vec<f6
 /// Expected number of doublets: `round(rate × n_cells)`, rounding halves to
 /// even like R.
 pub fn n_expected_doublets(n_cells: usize, doublet_rate: f64) -> usize {
-    ((n_cells as f64) * doublet_rate).round_ties_even() as usize
+    round_half_even((n_cells as f64) * doublet_rate) as usize
 }
 
 /// Flags the `n_doublets` cells with the highest pANN as doublets.

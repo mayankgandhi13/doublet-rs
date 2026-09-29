@@ -1,0 +1,7 @@
+^src/rust/target$
+^src/\.cargo$
+^src/vendor$
+^src/Makevars$
+^src/Makevars\.win$
+^.*\.Rproj$
+^\.Rproj\.user$

@@ -10,12 +10,12 @@
 //! borrowed matrices without converting indices, e.g. R's `dgCMatrix`,
 //! which stores 32-bit `i` and `p` slots.
 
-use rand::{RngExt, SeedableRng};
+use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use rayon::prelude::*;
-use sprs::{CsMatI, CsMatViewI, SpIndex};
 
-use crate::{Error, Result};
+use crate::matrix::{CscMatrix, CscView, SparseIndex};
+use crate::{round_half_even, Error, Result};
 
 /// Number of doublets DoubletFinder simulates for a given `pN`, the
 /// fraction of the merged (real + artificial) dataset that is artificial:
@@ -27,7 +27,7 @@ pub fn n_doublets_for_pn(n_real: usize, pn: f64) -> Result<usize> {
         )));
     }
     let n = n_real as f64;
-    Ok((n / (1.0 - pn) - n).round_ties_even() as usize)
+    Ok(round_half_even(n / (1.0 - pn) - n) as usize)
 }
 
 /// Draws `n_doublets` cell pairs from `0..n_cells`, reproducibly for a seed.
@@ -45,43 +45,35 @@ pub fn sample_pairs(n_cells: usize, n_doublets: usize, seed: u64) -> Result<Vec<
 
 /// Simulated doublets plus the parent cells each one was built from.
 #[derive(Debug, Clone)]
-pub struct Doublets<I: SpIndex = usize> {
-    /// genes × doublets, CSC.
-    pub matrix: CsMatI<f64, I>,
+pub struct Doublets<I> {
+    /// genes × doublets.
+    pub matrix: CscMatrix<I>,
     pub pairs: Vec<(usize, usize)>,
 }
 
 /// Simulates `n_doublets` doublets from a genes × cells matrix.
-///
-/// `expr` should be CSC (columns = cells); a CSR matrix is converted first,
-/// which costs one copy.
-pub fn simulate_doublets<I: SpIndex>(
-    expr: CsMatViewI<'_, f64, I>,
+pub fn simulate_doublets<I: SparseIndex>(
+    expr: CscView<'_, I>,
     n_doublets: usize,
     seed: u64,
 ) -> Result<Doublets<I>> {
-    let pairs = sample_pairs(expr.cols(), n_doublets, seed)?;
-    let matrix = with_csc(expr, |csc| build_doublets(csc, &pairs))?;
+    let pairs = sample_pairs(expr.n_cols(), n_doublets, seed)?;
+    let matrix = build_doublets(expr, &pairs)?;
     Ok(Doublets { matrix, pairs })
 }
 
 /// Builds the genes × `pairs.len()` doublet matrix for the given pairs.
-pub fn build_doublets<I: SpIndex>(
-    expr: CsMatViewI<'_, f64, I>,
+pub fn build_doublets<I: SparseIndex>(
+    expr: CscView<'_, I>,
     pairs: &[(usize, usize)],
-) -> Result<CsMatI<f64, I>> {
-    if !expr.is_csc() {
-        return Err(Error::InvalidArgument(
-            "expression matrix must be CSC".into(),
-        ));
-    }
+) -> Result<CscMatrix<I>> {
     if let Some(&(a, b)) = pairs
         .iter()
-        .find(|&&(a, b)| a >= expr.cols() || b >= expr.cols())
+        .find(|&&(a, b)| a >= expr.n_cols() || b >= expr.n_cols())
     {
         return Err(Error::InvalidArgument(format!(
             "pair ({a}, {b}) out of range for {} cells",
-            expr.cols()
+            expr.n_cols()
         )));
     }
 
@@ -91,55 +83,45 @@ pub fn build_doublets<I: SpIndex>(
         .collect();
 
     let nnz: usize = columns.iter().map(|(idx, _)| idx.len()).sum();
-    if I::try_from_usize(nnz).is_none() {
-        return Err(Error::InvalidArgument(format!(
-            "{nnz} non-zeros do not fit the matrix index type"
-        )));
-    }
+    let to_index = |n: usize| {
+        I::from_usize(n).ok_or_else(|| {
+            Error::InvalidArgument(format!("{nnz} non-zeros do not fit the matrix index type"))
+        })
+    };
     let mut indptr = Vec::with_capacity(columns.len() + 1);
-    indptr.push(I::zero());
+    indptr.push(to_index(0)?);
     let mut indices = Vec::with_capacity(nnz);
     let mut data = Vec::with_capacity(nnz);
     for (idx, vals) in columns {
         indices.extend(idx);
         data.extend(vals);
-        indptr.push(I::from_usize_unchecked(indices.len()));
+        indptr.push(to_index(indices.len())?);
     }
-    Ok(CsMatI::new_csc(
-        (expr.rows(), pairs.len()),
-        indptr,
-        indices,
-        data,
-    ))
+    CscMatrix::new(expr.n_rows(), pairs.len(), indptr, indices, data)
 }
 
 /// Iterator over doublets in batches of at most `batch_size` columns.
 ///
 /// Each batch is built in parallel; peak memory is one batch rather than
 /// the whole doublet matrix.
-pub struct DoubletBatches<'a, I: SpIndex = usize> {
-    expr: CsMatViewI<'a, f64, I>,
+pub struct DoubletBatches<'a, I> {
+    expr: CscView<'a, I>,
     pairs: Vec<(usize, usize)>,
     batch_size: usize,
     next: usize,
 }
 
-impl<'a, I: SpIndex> DoubletBatches<'a, I> {
+impl<'a, I: SparseIndex> DoubletBatches<'a, I> {
     pub fn new(
-        expr: CsMatViewI<'a, f64, I>,
+        expr: CscView<'a, I>,
         n_doublets: usize,
         batch_size: usize,
         seed: u64,
     ) -> Result<Self> {
-        if !expr.is_csc() {
-            return Err(Error::InvalidArgument(
-                "expression matrix must be CSC".into(),
-            ));
-        }
         if batch_size == 0 {
             return Err(Error::InvalidArgument("batch_size must be > 0".into()));
         }
-        let pairs = sample_pairs(expr.cols(), n_doublets, seed)?;
+        let pairs = sample_pairs(expr.n_cols(), n_doublets, seed)?;
         Ok(Self {
             expr,
             pairs,
@@ -153,43 +135,24 @@ impl<'a, I: SpIndex> DoubletBatches<'a, I> {
     }
 }
 
-impl<I: SpIndex> Iterator for DoubletBatches<'_, I> {
-    type Item = CsMatI<f64, I>;
+impl<I: SparseIndex> Iterator for DoubletBatches<'_, I> {
+    type Item = Result<CscMatrix<I>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.next >= self.pairs.len() {
             return None;
         }
         let end = (self.next + self.batch_size).min(self.pairs.len());
-        let batch = build_doublets(self.expr, &self.pairs[self.next..end])
-            .expect("pairs were validated when sampled");
+        let batch = build_doublets(self.expr, &self.pairs[self.next..end]);
         self.next = end;
         Some(batch)
     }
 }
 
-fn with_csc<I: SpIndex, T>(
-    expr: CsMatViewI<'_, f64, I>,
-    f: impl FnOnce(CsMatViewI<'_, f64, I>) -> T,
-) -> T {
-    if expr.is_csc() {
-        f(expr)
-    } else {
-        let csc = expr.to_csc();
-        f(csc.view())
-    }
-}
-
 /// Merges two sorted sparse columns into their element-wise average.
-fn average_columns<I: SpIndex>(
-    expr: CsMatViewI<'_, f64, I>,
-    a: usize,
-    b: usize,
-) -> (Vec<I>, Vec<f64>) {
-    let col_a = expr.outer_view(a).expect("column index validated");
-    let col_b = expr.outer_view(b).expect("column index validated");
-    let (ia, va) = (col_a.indices(), col_a.data());
-    let (ib, vb) = (col_b.indices(), col_b.data());
+fn average_columns<I: SparseIndex>(expr: CscView<'_, I>, a: usize, b: usize) -> (Vec<I>, Vec<f64>) {
+    let (ia, va) = expr.column(a);
+    let (ib, vb) = expr.column(b);
 
     let mut indices = Vec::with_capacity(ia.len() + ib.len());
     let mut values = Vec::with_capacity(ia.len() + ib.len());
@@ -215,24 +178,19 @@ fn average_columns<I: SpIndex>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use approx::assert_relative_eq;
-    use sprs::{CsMat, TriMat};
 
-    /// 3 genes × 3 cells:
+    /// 3 genes × 3 cells, laid out like R's dgCMatrix slots:
     /// cell0 = [2, 0, 4], cell1 = [0, 6, 2], cell2 = [0, 0, 0]
-    fn toy() -> CsMat<f64> {
-        let mut t = TriMat::new((3, 3));
-        t.add_triplet(0, 0, 2.0);
-        t.add_triplet(2, 0, 4.0);
-        t.add_triplet(1, 1, 6.0);
-        t.add_triplet(2, 1, 2.0);
-        t.to_csc()
+    const P: [i32; 4] = [0, 2, 4, 4];
+    const I: [i32; 4] = [0, 2, 1, 2];
+    const X: [f64; 4] = [2.0, 4.0, 6.0, 2.0];
+
+    fn toy() -> CscView<'static, i32> {
+        CscView::new(3, 3, &P, &I, &X).unwrap()
     }
 
-    fn dense_col(m: &CsMat<f64>, c: usize) -> Vec<f64> {
-        (0..m.rows())
-            .map(|r| *m.get(r, c).unwrap_or(&0.0))
-            .collect()
+    fn dense_col<T: SparseIndex>(m: &CscMatrix<T>, c: usize) -> Vec<f64> {
+        (0..3).map(|r| m.view().get(r, c)).collect()
     }
 
     #[test]
@@ -245,8 +203,7 @@ mod tests {
 
     #[test]
     fn doublet_is_average_of_parents() {
-        let m = build_doublets(toy().view(), &[(0, 1), (0, 2), (1, 1)]).unwrap();
-        assert_eq!(m.shape(), (3, 3));
+        let m = build_doublets(toy(), &[(0, 1), (0, 2), (1, 1)]).unwrap();
         assert_eq!(dense_col(&m, 0), vec![1.0, 3.0, 3.0]);
         assert_eq!(dense_col(&m, 1), vec![1.0, 0.0, 2.0]);
         assert_eq!(dense_col(&m, 2), vec![0.0, 6.0, 2.0]);
@@ -254,68 +211,53 @@ mod tests {
 
     #[test]
     fn same_seed_same_doublets() {
-        let expr = toy();
-        let a = simulate_doublets(expr.view(), 50, 7).unwrap();
-        let b = simulate_doublets(expr.view(), 50, 7).unwrap();
-        let c = simulate_doublets(expr.view(), 50, 8).unwrap();
+        let a = simulate_doublets(toy(), 50, 7).unwrap();
+        let b = simulate_doublets(toy(), 50, 7).unwrap();
+        let c = simulate_doublets(toy(), 50, 8).unwrap();
         assert_eq!(a.pairs, b.pairs);
         assert_eq!(a.matrix, b.matrix);
         assert_ne!(a.pairs, c.pairs);
     }
 
     #[test]
-    fn csr_input_gives_same_result() {
-        let expr = toy();
-        let csr = expr.to_csr();
-        let a = simulate_doublets(expr.view(), 20, 1).unwrap();
-        let b = simulate_doublets(csr.view(), 20, 1).unwrap();
-        assert_eq!(a.matrix, b.matrix);
+    fn index_type_does_not_change_results() {
+        let p: Vec<usize> = P.iter().map(|&v| v as usize).collect();
+        let i: Vec<usize> = I.iter().map(|&v| v as usize).collect();
+        let wide = CscView::new(3, 3, &p, &i, &X).unwrap();
+        let a = simulate_doublets(toy(), 20, 5).unwrap();
+        let b = simulate_doublets(wide, 20, 5).unwrap();
+        assert_eq!(a.pairs, b.pairs);
+        for c in 0..20 {
+            assert_eq!(dense_col(&a.matrix, c), dense_col(&b.matrix, c));
+        }
     }
 
     #[test]
     fn batches_concatenate_to_full_matrix() {
-        let expr = toy();
-        let full = simulate_doublets(expr.view(), 10, 3).unwrap();
-        let batches: Vec<_> = DoubletBatches::new(expr.view(), 10, 4, 3)
+        let full = simulate_doublets(toy(), 10, 3).unwrap();
+        let batches: Vec<_> = DoubletBatches::new(toy(), 10, 4, 3)
             .unwrap()
+            .map(|b| b.unwrap())
             .collect();
         assert_eq!(
-            batches.iter().map(|b| b.cols()).collect::<Vec<_>>(),
+            batches
+                .iter()
+                .map(|b| b.view().n_cols())
+                .collect::<Vec<_>>(),
             vec![4, 4, 2]
         );
 
         let mut col = 0;
         for batch in &batches {
-            for c in 0..batch.cols() {
-                for (x, y) in dense_col(batch, c).iter().zip(dense_col(&full.matrix, col)) {
-                    assert_relative_eq!(*x, y);
-                }
+            for c in 0..batch.view().n_cols() {
+                assert_eq!(dense_col(batch, c), dense_col(&full.matrix, col));
                 col += 1;
             }
         }
     }
 
     #[test]
-    fn borrowed_i32_indices_match_usize() {
-        // Same matrix as `toy()`, laid out like R's dgCMatrix slots.
-        let p: Vec<i32> = vec![0, 2, 4, 4];
-        let i: Vec<i32> = vec![0, 2, 1, 2];
-        let x = vec![2.0, 4.0, 6.0, 2.0];
-        let view = CsMatViewI::new_csc((3, 3), &p, &i, &x);
-
-        let from_i32 = simulate_doublets(view, 20, 5).unwrap();
-        let from_usize = simulate_doublets(toy().view(), 20, 5).unwrap();
-        assert_eq!(from_i32.pairs, from_usize.pairs);
-        assert_eq!(from_i32.matrix.indptr().raw_storage().len(), 21);
-        for c in 0..20 {
-            for r in 0..3 {
-                assert_eq!(from_i32.matrix.get(r, c), from_usize.matrix.get(r, c));
-            }
-        }
-    }
-
-    #[test]
     fn rejects_out_of_range_pairs() {
-        assert!(build_doublets(toy().view(), &[(0, 3)]).is_err());
+        assert!(build_doublets(toy(), &[(0, 3)]).is_err());
     }
 }

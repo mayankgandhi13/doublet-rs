@@ -14,7 +14,11 @@
 #
 # Part B (accuracy): runs the doubletrs pipeline (Rust doublet simulation,
 # same Seurat preprocessing, Rust kNN) and compares AUPRC / AUROC against
-# the known doublets for DoubletFinder, doubletrs exact, and doubletrs HNSW.
+# the known doublets for DoubletFinder and doubletrs.
+#
+# The published results (README, validation/results/) were produced at
+# commit 2a127dc, when the R package also offered HNSW search; HNSW was
+# removed afterwards because exact search was faster on every dataset.
 
 suppressPackageStartupMessages({
   library(Matrix)
@@ -120,7 +124,7 @@ colnames(df_doublets) <- paste0("X", seq_len(n_doublets))
 pcs_df <- merged_pcs(cbind(raw, df_doublets))
 rm(df_doublets)
 
-pann_rs_on_df <- unname(compute_pann(pcs_df, n_real, k, method = "exact"))
+pann_rs_on_df <- unname(compute_pann(pcs_df, n_real, k))
 diff <- abs(pann_rs_on_df - pann_df)
 part_a <- data.frame(
   dataset = name,
@@ -138,8 +142,7 @@ print(part_a, row.names = FALSE)
 cat("\n== Part B: accuracy against known doublets ==\n")
 t_sim <- system.time(sim <- simulate_doublets(raw, n_doublets, seed = seed))[["elapsed"]]
 t_pre <- system.time(pcs_rs <- merged_pcs(cbind(raw, sim)))[["elapsed"]]
-t_exact <- system.time(pann_exact <- compute_pann(pcs_rs, n_real, k, "exact"))[["elapsed"]]
-t_hnsw <- system.time(pann_hnsw <- compute_pann(pcs_rs, n_real, k, "hnsw"))[["elapsed"]]
+t_exact <- system.time(pann_exact <- compute_pann(pcs_rs, n_real, k))[["elapsed"]]
 
 score <- function(method, pann, seconds) {
   pos <- pann[truth]
@@ -157,13 +160,12 @@ score <- function(method, pann, seconds) {
 }
 part_b <- rbind(
   score("DoubletFinder", pann_df, t_df),
-  score("doubletrs (exact)", unname(pann_exact), t_sim + t_pre + t_exact),
-  score("doubletrs (hnsw)", unname(pann_hnsw), t_sim + t_pre + t_hnsw)
+  score("doubletrs (exact)", unname(pann_exact), t_sim + t_pre + t_exact)
 )
 print(part_b, row.names = FALSE, digits = 3)
-cat(sprintf("\nHNSW vs exact pANN correlation: %.4f\n", cor(pann_exact, pann_hnsw)))
-cat(sprintf("doubletrs time split: simulate %.2fs, Seurat preprocessing %.2fs, exact kNN %.2fs, HNSW kNN %.2fs\n",
-            t_sim, t_pre, t_exact, t_hnsw))
+cat(sprintf("doubletrs time split: simulate %.2fs, Seurat preprocessing %.2fs, kNN %.2fs
+",
+            t_sim, t_pre, t_exact))
 
 # ---- Save ------------------------------------------------------------------
 
@@ -174,7 +176,7 @@ write.csv(part_a, file.path(out_dir, paste0(run_id, "_exactness.csv")), row.name
 write.csv(part_b, file.path(out_dir, paste0(run_id, "_accuracy.csv")), row.names = FALSE)
 saveRDS(
   list(truth = truth, pann_df = pann_df, pann_rs_on_df = pann_rs_on_df,
-       pann_exact = pann_exact, pann_hnsw = pann_hnsw,
+       pann_exact = pann_exact,
        params = list(pN = pN, pK = pK, n_pcs = n_pcs, seed = seed, k = k)),
   file.path(out_dir, paste0(run_id, "_scores.rds"))
 )
