@@ -17,7 +17,7 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Mayank Gandhi \email{gandhi.may@northeastern.edu} [copyright holder]
+\strong{Maintainer}: Mayank Gandhi \email{135.mayankgandhi@gmail.com} [copyright holder]
 
 Other contributors:
 \itemize{

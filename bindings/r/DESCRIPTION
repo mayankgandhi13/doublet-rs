@@ -2,7 +2,7 @@ Package: doubletrs
 Title: Memory-Efficient Doublet Detection for Single-Cell RNA Sequencing
 Version: 0.1.0
 Authors@R: c(
-    person("Mayank", "Gandhi", email = "gandhi.may@northeastern.edu",
+    person("Mayank", "Gandhi", email = "135.mayankgandhi@gmail.com",
       role = c("aut", "cre", "cph")),
     person("Authors of the dependency Rust crates", role = "cph",
       comment = "see inst/AUTHORS for the bundled crates, their authors and licenses")
