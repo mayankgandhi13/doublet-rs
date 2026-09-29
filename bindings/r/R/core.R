@@ -102,8 +102,8 @@ compute_pann <- function(pcs, n_real, k, threads = doubletrs_threads()) {
 #'
 #' The default for every `threads` argument. It is
 #' `getOption("doubletrs.threads")` if set, otherwise the number of CPU
-#' cores. During `R CMD check --as-cran` it is at most 2, as CRAN policy
-#' requires.
+#' cores, capped by the `OMP_THREAD_LIMIT` environment variable if set.
+#' During `R CMD check --as-cran` it is at most 2, as CRAN policy requires.
 #'
 #' @return A single positive integer.
 #' @export
@@ -124,6 +124,10 @@ doubletrs_threads <- function() {
   limit <- Sys.getenv("_R_CHECK_LIMIT_CORES_", "")
   if (nzchar(limit) && !identical(tolower(limit), "false")) {
     n <- min(n, 2L)
+  }
+  omp <- suppressWarnings(as.integer(Sys.getenv("OMP_THREAD_LIMIT", "")))
+  if (!is.na(omp) && omp >= 1L) {
+    n <- min(n, omp)
   }
   as.integer(n)
 }

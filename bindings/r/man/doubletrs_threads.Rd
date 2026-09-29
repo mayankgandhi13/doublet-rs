@@ -12,8 +12,8 @@ A single positive integer.
 \description{
 The default for every \code{threads} argument. It is
 \code{getOption("doubletrs.threads")} if set, otherwise the number of CPU
-cores. During \verb{R CMD check --as-cran} it is at most 2, as CRAN policy
-requires.
+cores, capped by the \code{OMP_THREAD_LIMIT} environment variable if set.
+During \verb{R CMD check --as-cran} it is at most 2, as CRAN policy requires.
 }
 \examples{
 doubletrs_threads()

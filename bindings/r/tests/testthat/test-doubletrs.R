@@ -80,6 +80,17 @@ test_that("doubletrs_threads() respects the option", {
   expect_identical(doubletrs_threads(), 1L)
   options(doubletrs.threads = 0)
   expect_error(doubletrs_threads(), "at least 1")
+
+  options(doubletrs.threads = NULL)
+  old_env <- Sys.getenv(c("OMP_THREAD_LIMIT", "_R_CHECK_LIMIT_CORES_"), unset = NA)
+  on.exit(for (v in names(old_env)) {
+    if (is.na(old_env[[v]])) Sys.unsetenv(v) else do.call(Sys.setenv, as.list(old_env[v]))
+  }, add = TRUE)
+  Sys.unsetenv("_R_CHECK_LIMIT_CORES_")
+  Sys.setenv(OMP_THREAD_LIMIT = "1")
+  expect_identical(doubletrs_threads(), 1L)
+  Sys.setenv(`_R_CHECK_LIMIT_CORES_` = "TRUE", OMP_THREAD_LIMIT = "")
+  expect_lte(doubletrs_threads(), 2L)
 })
 
 test_that("true doublets get high pANN on two-cell-type data", {
