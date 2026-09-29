@@ -7,7 +7,8 @@ toy_counts <- function(genes = 30, cells = 40, seed = 1) {
 
 test_that("doublets are the average of their parent cells", {
   counts <- toy_counts()
-  d <- simulate_doublets(counts, n = 25, seed = 7)
+  set.seed(7)
+  d <- simulate_doublets(counts, n = 25)
   parents <- attr(d, "parents")
 
   expect_s4_class(d, "dgCMatrix")
@@ -20,13 +21,11 @@ test_that("doublets are the average of their parent cells", {
   expect_equal(unname(as.matrix(d)), unname(as.matrix(expected)))
 })
 
-test_that("seeds make simulation reproducible", {
+test_that("set.seed() makes simulation reproducible", {
   counts <- toy_counts()
-  expect_identical(simulate_doublets(counts, 10, seed = 3), simulate_doublets(counts, 10, seed = 3))
-  expect_false(identical(
-    attr(simulate_doublets(counts, 10, seed = 3), "parents"),
-    attr(simulate_doublets(counts, 10, seed = 4), "parents")
-  ))
+  set.seed(3); a <- simulate_doublets(counts, 10)
+  set.seed(4); b <- simulate_doublets(counts, 10)
+  expect_false(identical(attr(a, "parents"), attr(b, "parents")))
 
   set.seed(99); a <- simulate_doublets(counts, 10)
   set.seed(99); b <- simulate_doublets(counts, 10)
@@ -36,8 +35,8 @@ test_that("seeds make simulation reproducible", {
 test_that("dense matrices are accepted", {
   counts <- toy_counts()
   expect_equal(
-    simulate_doublets(as.matrix(counts), 5, seed = 1),
-    simulate_doublets(counts, 5, seed = 1)
+    {set.seed(1); simulate_doublets(as.matrix(counts), 5)},
+    {set.seed(1); simulate_doublets(counts, 5)}
   )
 })
 
@@ -67,8 +66,8 @@ test_that("pANN is the share of neighbours that are artificial", {
 test_that("thread count does not change results", {
   counts <- toy_counts()
   expect_identical(
-    simulate_doublets(counts, 30, seed = 2, threads = 1),
-    simulate_doublets(counts, 30, seed = 2, threads = 2)
+    {set.seed(2); simulate_doublets(counts, 30, threads = 1)},
+    {set.seed(2); simulate_doublets(counts, 30, threads = 2)}
   )
   set.seed(6)
   pcs <- matrix(rnorm(300 * 5), 300, 5)
@@ -96,7 +95,7 @@ test_that("true doublets get high pANN on two-cell-type data", {
   )
   is_doublet <- rep(c(FALSE, TRUE), c(600, 30))
 
-  sim <- simulate_doublets(counts, n = round(630 / 0.75 - 630), seed = 1)
+  sim <- simulate_doublets(counts, n = round(630 / 0.75 - 630))
   merged <- t(cbind(counts, as.matrix(sim)))
   k <- round(nrow(merged) * 0.02)
   pann <- compute_pann(merged, n_real = 630, k = k)
@@ -117,5 +116,5 @@ test_that("bad arguments give clear errors", {
   expect_error(find_neighbors(pcs, 5, 2), "NaN")
   expect_error(find_neighbors(as.data.frame(pcs), 5, 2), "numeric matrix")
   expect_error(simulate_doublets("x", 5), "matrix")
-  expect_error(simulate_doublets(toy_counts(), 5, seed = 1.5), "whole number")
+  expect_error(simulate_doublets(toy_counts(), 5.5), "whole number")
 })

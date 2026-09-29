@@ -35,5 +35,5 @@ grep -q 'path = "doublet_rs"' "$pkg/src/rust/Cargo.toml"
 )
 
 # 4. Build the source tarball.
-(cd "$out" && R CMD build "$pkg")
+(cd "$out" && R CMD build ${R_BUILD_ARGS:-} "$pkg")
 ls -la "$out"/doubletrs_*.tar.gz

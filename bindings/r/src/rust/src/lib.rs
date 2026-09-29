@@ -27,19 +27,20 @@ fn row_major(pcs: &RMatrix<f64>) -> (Vec<f64>, usize, usize) {
     (col_major_to_row_major(pcs.data(), n, d), n, d)
 }
 
-/// Simulate doublets from dgCMatrix slots.
-/// Returns the doublet matrix slots and 1-based parent cell indices.
+/// Build doublets from dgCMatrix slots and 1-based parent cell indices
+/// (drawn in R, so `set.seed()` controls them). Returns the doublet matrix
+/// slots.
 /// @noRd
 #[extendr]
 #[allow(clippy::too_many_arguments)]
-fn rs_simulate_doublets(
+fn rs_build_doublets(
     i: Robj,
     p: Robj,
     x: Robj,
     n_genes: i32,
     n_cells: i32,
-    n_doublets: i32,
-    seed: i32,
+    cell_a: Vec<i32>,
+    cell_b: Vec<i32>,
     threads: i32,
 ) -> Result<List> {
     let i = i
@@ -59,27 +60,23 @@ fn rs_simulate_doublets(
         x,
     )
     .map_err(fail)?;
-    let n_doublets = to_usize(n_doublets, "n_doublets")?;
+    if cell_a.len() != cell_b.len() {
+        return Err(fail("`cell_a` and `cell_b` must have the same length"));
+    }
+    let pairs: Vec<(usize, usize)> = cell_a
+        .iter()
+        .zip(&cell_b)
+        .map(|(&a, &b)| Ok((to_usize(a - 1, "cell_a")?, to_usize(b - 1, "cell_b")?)))
+        .collect::<Result<_>>()?;
 
-    let doublets = with_threads(to_usize(threads, "threads")?, || {
-        doublet_rs::simulate_doublets(expr, n_doublets, seed as i64 as u64)
+    let matrix = with_threads(to_usize(threads, "threads")?, || {
+        doublet_rs::simulate::build_doublets(expr, &pairs)
     })
     .and_then(|r| r)
     .map_err(fail)?;
 
-    let (cell_a, cell_b): (Vec<i32>, Vec<i32>) = doublets
-        .pairs
-        .iter()
-        .map(|&(a, b)| (a as i32 + 1, b as i32 + 1))
-        .unzip();
-    let (indptr, indices, data) = doublets.matrix.into_parts();
-    Ok(list!(
-        i = indices,
-        p = indptr,
-        x = data,
-        cell_a = cell_a,
-        cell_b = cell_b
-    ))
+    let (indptr, indices, data) = matrix.into_parts();
+    Ok(list!(i = indices, p = indptr, x = data))
 }
 
 /// k nearest neighbours of the first `n_real` rows, 1-based.
@@ -145,7 +142,7 @@ fn rs_pann_sweep(
 // See corresponding C code in `entrypoint.c`.
 extendr_module! {
     mod doubletrs;
-    fn rs_simulate_doublets;
+    fn rs_build_doublets;
     fn rs_find_neighbors;
     fn rs_compute_pann;
     fn rs_pann_sweep;

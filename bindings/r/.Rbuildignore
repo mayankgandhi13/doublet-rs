@@ -5,3 +5,7 @@
 ^src/Makevars\.win$
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^doc$
+^Meta$
+^cran-comments\.md$
+^README\.Rmd$

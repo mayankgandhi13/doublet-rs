@@ -4,16 +4,13 @@
 \alias{simulate_doublets}
 \title{Simulate artificial doublets}
 \usage{
-simulate_doublets(counts, n, seed = NULL, threads = doubletrs_threads())
+simulate_doublets(counts, n, threads = doubletrs_threads())
 }
 \arguments{
 \item{counts}{Genes x cells count matrix, ideally a \code{dgCMatrix}. Other
 matrix types are converted to one first.}
 
 \item{n}{Number of doublets to simulate.}
-
-\item{seed}{Integer seed. The default draws one from R's RNG, so
-\code{set.seed()} makes results reproducible.}
 
 \item{threads}{Number of threads to use. See \code{\link[=doubletrs_threads]{doubletrs_threads()}}.}
 }
@@ -24,12 +21,16 @@ columns of \code{counts}) for each doublet.
 }
 \description{
 Builds \code{n} artificial doublets by averaging pairs of cells drawn
-independently and with replacement, as DoubletFinder does. The count
-matrix is read directly from R memory; it is not copied.
+independently and with replacement, as DoubletFinder does. Parent cells
+are drawn with R's random number generator, in the same order as
+DoubletFinder, so \code{set.seed()} makes results reproducible and identical
+to DoubletFinder's. The count matrix is read directly from R memory; it
+is not copied.
 }
 \examples{
 counts <- abs(Matrix::rsparsematrix(100, 50, density = 0.1))
-doublets <- simulate_doublets(counts, n = 20, seed = 1)
+set.seed(1)
+doublets <- simulate_doublets(counts, n = 20)
 dim(doublets)
 head(attr(doublets, "parents"))
 }

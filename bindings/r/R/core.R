@@ -1,14 +1,15 @@
 #' Simulate artificial doublets
 #'
 #' Builds `n` artificial doublets by averaging pairs of cells drawn
-#' independently and with replacement, as DoubletFinder does. The count
-#' matrix is read directly from R memory; it is not copied.
+#' independently and with replacement, as DoubletFinder does. Parent cells
+#' are drawn with R's random number generator, in the same order as
+#' DoubletFinder, so `set.seed()` makes results reproducible and identical
+#' to DoubletFinder's. The count matrix is read directly from R memory; it
+#' is not copied.
 #'
 #' @param counts Genes x cells count matrix, ideally a `dgCMatrix`. Other
 #'   matrix types are converted to one first.
 #' @param n Number of doublets to simulate.
-#' @param seed Integer seed. The default draws one from R's RNG, so
-#'   `set.seed()` makes results reproducible.
 #' @param threads Number of threads to use. See [doubletrs_threads()].
 #'
 #' @return A genes x `n` `dgCMatrix` of doublets, with an attribute
@@ -17,27 +18,37 @@
 #' @export
 #' @examples
 #' counts <- abs(Matrix::rsparsematrix(100, 50, density = 0.1))
-#' doublets <- simulate_doublets(counts, n = 20, seed = 1)
+#' set.seed(1)
+#' doublets <- simulate_doublets(counts, n = 20)
 #' dim(doublets)
 #' head(attr(doublets, "parents"))
-simulate_doublets <- function(counts, n, seed = NULL, threads = doubletrs_threads()) {
+simulate_doublets <- function(counts, n, threads = doubletrs_threads()) {
   counts <- as_dgc(counts)
   n <- as_count(n, "n")
-  seed <- if (is.null(seed)) sample.int(.Machine$integer.max, 1L) else as_seed(seed)
+  if (ncol(counts) == 0L) {
+    stop("`counts` has no cells.", call. = FALSE)
+  }
+  # Same draws as DoubletFinder: all first parents, then all second parents.
+  cell_a <- sample.int(ncol(counts), n, replace = TRUE)
+  cell_b <- sample.int(ncol(counts), n, replace = TRUE)
+  doublets <- build_doublets(counts, cell_a, cell_b, threads)
+  colnames(doublets) <- paste0("doublet_", seq_len(n))
+  attr(doublets, "parents") <- data.frame(cell_a = cell_a, cell_b = cell_b)
+  doublets
+}
 
-  out <- rs_simulate_doublets(
-    counts@i, counts@p, counts@x,
-    nrow(counts), ncol(counts), n, seed, as_threads(threads)
+# Doublets from given 1-based parent indices; `counts` must be a dgCMatrix.
+build_doublets <- function(counts, cell_a, cell_b, threads) {
+  out <- rs_build_doublets(
+    counts@i, counts@p, counts@x, nrow(counts), ncol(counts),
+    as.integer(cell_a), as.integer(cell_b), as_threads(threads)
   )
-
-  doublets <- new(
+  new(
     "dgCMatrix",
     i = out$i, p = out$p, x = out$x,
-    Dim = c(nrow(counts), n),
-    Dimnames = list(rownames(counts), paste0("doublet_", seq_len(n)))
+    Dim = c(nrow(counts), length(cell_a)),
+    Dimnames = list(rownames(counts), NULL)
   )
-  attr(doublets, "parents") <- data.frame(cell_a = out$cell_a, cell_b = out$cell_b)
-  doublets
 }
 
 #' Find nearest neighbours of real cells

@@ -31,11 +31,3 @@ as_threads <- function(x) {
   }
   x
 }
-
-as_seed <- function(x) {
-  if (length(x) != 1L || !is.numeric(x) || is.na(x) || x != round(x) ||
-    abs(x) > .Machine$integer.max) {
-    stop("`seed` must be a single whole number.", call. = FALSE)
-  }
-  as.integer(x)
-}

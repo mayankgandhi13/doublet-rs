@@ -1,0 +1,117 @@
+---
+title: "Doublet detection with doubletrs"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Doublet detection with doubletrs}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+has_seurat <- requireNamespace("Seurat", quietly = TRUE)
+# CRAN allows at most 2 cores; by default doubletrs uses all of them.
+options(doubletrs.threads = 2)
+```
+
+doubletrs detects doublets (droplets containing two cells) in single-cell
+RNA sequencing data with the DoubletFinder method of McGinnis, Murrow and
+Gartner (2019). The memory-heavy steps (artificial doublet simulation,
+nearest-neighbour search and pANN scoring) are written in Rust. DoubletFinder
+builds a dense cells x cells distance matrix; doubletrs never does.
+
+doubletrs has the same functions and arguments as DoubletFinder, so an
+existing workflow switches by replacing `library(DoubletFinder)` with
+`library(doubletrs)`. Parent cells for artificial doublets are drawn with the
+same R random number calls, so after the same `set.seed()` the results are
+identical to DoubletFinder's.
+
+```{r}
+library(doubletrs)
+```
+
+## A DoubletFinder workflow
+
+The workflow functions need Seurat. This example uses `pbmc_small`, an
+80-cell dataset from SeuratObject that has already been normalised, scaled
+and run through PCA.
+
+```{r, eval = has_seurat}
+seu <- SeuratObject::pbmc_small
+```
+
+### 1. Choose pK
+
+`paramSweep()` computes pANN over a grid of pN and pK values.
+`summarizeSweep()` measures how bimodal each pANN distribution is, and
+`find.pK()` combines those into BCmvn. The pK with the highest BCmvn is
+DoubletFinder's recommended choice.
+
+```{r, eval = has_seurat, fig.width = 6, fig.height = 3.5}
+set.seed(1)
+sweep <- paramSweep(seu, PCs = 1:5)
+stats <- summarizeSweep(sweep)
+bcmvn <- find.pK(stats)
+pK <- as.numeric(as.character(bcmvn$pK[which.max(bcmvn$BCmetric)]))
+pK
+```
+
+### 2. Estimate the number of doublets
+
+The expected number of doublets comes from the loading density of the
+experiment; here we assume 7.5%. Doublets of two cells of the same type
+(homotypic) are hard to detect, so the estimate is scaled down by the
+expected homotypic fraction from cluster labels.
+
+```{r, eval = has_seurat}
+homotypic <- modelHomotypic(seu$RNA_snn_res.1)
+nExp <- round(0.075 * ncol(seu) * (1 - homotypic))
+nExp
+```
+
+### 3. Call doublets
+
+```{r, eval = has_seurat}
+set.seed(1)
+seu <- doubletFinder(seu, PCs = 1:5, pN = 0.25, pK = pK, nExp = nExp)
+calls <- grep("^DF.classifications", colnames(seu@meta.data), value = TRUE)
+table(seu@meta.data[[calls]])
+```
+
+The metadata columns are named as DoubletFinder names them:
+`pANN_<pN>_<pK>_<nExp>` and `DF.classifications_<pN>_<pK>_<nExp>`.
+
+## Lower-level functions
+
+The steps are also available without Seurat, for other preprocessing
+pipelines. `simulate_doublets()` averages random pairs of cells from a count
+matrix. After merging real cells and doublets, and normalising and running
+PCA on the merged matrix in the pipeline of your choice, `compute_pann()`
+scores each real cell.
+
+```{r}
+set.seed(1)
+counts <- abs(Matrix::rsparsematrix(200, 100, density = 0.2))
+doublets <- simulate_doublets(counts, n = 33)
+dim(doublets)
+
+# Stand-in for PCs of the merged matrix: real cells first, then doublets.
+pcs <- matrix(rnorm(133 * 5), ncol = 5)
+pann <- compute_pann(pcs, n_real = 100, k = 10)
+summary(pann)
+```
+
+`find_neighbors()` returns the neighbour indices themselves.
+
+## Threads
+
+Every function takes a `threads` argument. The default,
+`doubletrs_threads()`, uses all CPU cores unless
+`options(doubletrs.threads = n)` is set. Results do not depend on the number
+of threads.
+
+## Reference
+
+McGinnis CS, Murrow LM, Gartner ZJ (2019). DoubletFinder: Doublet detection
+in single-cell RNA sequencing data using artificial nearest neighbors.
+*Cell Systems* 8(4), 329-337. <https://doi.org/10.1016/j.cels.2019.03.003>

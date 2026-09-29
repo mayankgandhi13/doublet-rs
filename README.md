@@ -61,22 +61,23 @@ doublet-rs/
 
 ### R API
 
-The R package `doubletrs` (in `bindings/r/`, built with `extendr`) fits into an existing Seurat workflow. Normalization and PCA stay in Seurat; Rust does the simulation and neighbour search:
+The R package `doubletrs` (in `bindings/r/`, built with `extendr`) is a drop-in replacement for DoubletFinder: it has the same functions (`doubletFinder()`, `paramSweep()`, `summarizeSweep()`, `find.pK()`, `modelHomotypic()`) with the same arguments and outputs. Replace `library(DoubletFinder)` with `library(doubletrs)`:
 
 ```r
 library(doubletrs)
 
-n_real   <- ncol(counts)                                          # dgCMatrix, genes x cells
-doublets <- simulate_doublets(counts, n = round(n_real / 0.75 - n_real))  # pN = 0.25
-merged   <- cbind(counts, doublets)
-
-# ...normalize + PCA on `merged` with Seurat -> `pcs` (cells x PCs, real cells first)...
-
-pann     <- compute_pann(pcs, n_real = n_real, k = round(nrow(pcs) * 0.09))  # pK = 0.09
-calls    <- rank(-pann, ties.method = "first") <= round(0.075 * n_real)       # 7.5% doublet rate
+# seu: a Seurat object after NormalizeData, FindVariableFeatures, ScaleData, RunPCA
+set.seed(1)
+sweep <- paramSweep(seu, PCs = 1:10)
+bcmvn <- find.pK(summarizeSweep(sweep))
+pK    <- as.numeric(as.character(bcmvn$pK[which.max(bcmvn$BCmetric)]))
+nExp  <- round(0.075 * ncol(seu) * (1 - modelHomotypic(seu$seurat_clusters)))
+seu   <- doubletFinder(seu, PCs = 1:10, pN = 0.25, pK = pK, nExp = nExp)
 ```
 
-`find_neighbors()` returns the neighbour indices themselves. Every function takes a `threads` argument, defaulting to `doubletrs_threads()` (all cores, or `options(doubletrs.threads = n)`).
+Parent cells for artificial doublets are drawn with the same R random number calls as DoubletFinder, so after the same `set.seed()` the results are identical. On `pbmc-1A-dm` (3,298 cells), `doubletFinder()` pANN matched DoubletFinder for 3,298 / 3,298 cells, `paramSweep()` for 613,428 / 613,428 values, and `summarizeSweep()` for 186 / 186 bimodality coefficients, with the same pK chosen; `paramSweep()` ran in 8.6 s vs 26.9 s ([validation/compare_interface.R](validation/compare_interface.R)).
+
+Lower-level functions work with any preprocessing pipeline: `simulate_doublets()`, `find_neighbors()` and `compute_pann()`. Every function takes a `threads` argument, defaulting to `doubletrs_threads()` (all cores, or `options(doubletrs.threads = n)`).
 
 To install from a clone (needs Rust >= 1.71):
 
@@ -183,12 +184,15 @@ flowchart TD
 
 - [x] Sparse matrix I/O
 - [x] Artificial doublet simulation (batched, parallel)
-- [x] HNSW kNN index + parallel queries
+- [x] Exact parallel kNN (HNSW available behind a cargo feature)
 - [x] pANN scoring + thresholding
 - [x] Validate core against DoubletFinder reference outputs
 - [x] R binding (extendr)
+- [x] DoubletFinder-compatible R interface (`doubletFinder()`, `paramSweep()`, `summarizeSweep()`, `find.pK()`, `modelHomotypic()`)
+- [x] CRAN-ready package: vendored crates, rustc >= 1.71, `R CMD check --as-cran` on Linux, macOS and Windows
+- [ ] Submit to CRAN
+- [ ] Memory benchmark vs. DoubletFinder
 - [ ] Python binding (PyO3)
-- [ ] Benchmark suite vs. DoubletFinder
 - [ ] Write-up of results
 
 ## Acknowledgements

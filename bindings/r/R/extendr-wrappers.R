@@ -5,10 +5,11 @@
 #' @useDynLib doubletrs, .registration = TRUE
 NULL
 
-#' Simulate doublets from dgCMatrix slots.
-#' Returns the doublet matrix slots and 1-based parent cell indices.
+#' Build doublets from dgCMatrix slots and 1-based parent cell indices
+#' (drawn in R, so `set.seed()` controls them). Returns the doublet matrix
+#' slots.
 #' @noRd
-rs_simulate_doublets <- function(i, p, x, n_genes, n_cells, n_doublets, seed, threads) .Call(wrap__rs_simulate_doublets, i, p, x, n_genes, n_cells, n_doublets, seed, threads)
+rs_build_doublets <- function(i, p, x, n_genes, n_cells, cell_a, cell_b, threads) .Call(wrap__rs_build_doublets, i, p, x, n_genes, n_cells, cell_a, cell_b, threads)
 
 #' k nearest neighbours of the first `n_real` rows, 1-based.
 #' @noRd

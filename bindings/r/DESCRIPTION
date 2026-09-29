@@ -20,6 +20,18 @@ SystemRequirements: Cargo (Rust's package manager), rustc >= 1.71
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
-Imports: Matrix, methods, parallel
-Suggests: testthat (>= 3.0.0)
+Imports:
+    graphics,
+    KernSmooth,
+    Matrix,
+    methods,
+    parallel,
+    stats
+Suggests:
+    knitr,
+    rmarkdown,
+    Seurat (>= 5.0.0),
+    SeuratObject (>= 5.0.0),
+    testthat (>= 3.0.0)
+VignetteBuilder: knitr
 Config/testthat/edition: 3

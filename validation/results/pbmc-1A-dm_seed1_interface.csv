@@ -1,0 +1,4 @@
+"dataset","seed","check","identical_values","max_abs_diff","calls_identical","doubletfinder_s","doubletrs_s","chosen_pk_df","chosen_pk_rs"
+"pbmc-1A-dm",1,"doubletFinder()","3298 / 3298",0,TRUE,2.955,1.737,"0.01","0.01"
+"pbmc-1A-dm",1,"paramSweep() (186 pN-pK pairs)","613428 / 613428",0,NA,26.864,8.617,"0.01","0.01"
+"pbmc-1A-dm",1,"summarizeSweep() BCreal","186 / 186",0,NA,NA,NA,"0.01","0.01"
