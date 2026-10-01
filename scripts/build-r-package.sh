@@ -30,10 +30,11 @@ grep -q 'path = "doublet_rs"' "$pkg/src/rust/Cargo.toml"
 (
   cd "$pkg/src/rust"
   cargo vendor --locked --versioned-dirs vendor > vendor-config.toml
-  tar -cJf vendor.tar.xz vendor
+  # No extended attributes: macOS adds some that other platforms' tar warns about.
+  COPYFILE_DISABLE=1 tar --no-xattrs -cJf vendor.tar.xz vendor
   rm -rf vendor
 )
 
 # 4. Build the source tarball.
-(cd "$out" && R CMD build ${R_BUILD_ARGS:-} "$pkg")
+(cd "$out" && COPYFILE_DISABLE=1 R CMD build ${R_BUILD_ARGS:-} "$pkg")
 ls -la "$out"/doubletrs_*.tar.gz

@@ -6,7 +6,7 @@
 \alias{doubletrs-package}
 \title{doubletrs: Memory-Efficient Doublet Detection for Single-Cell RNA Sequencing}
 \description{
-Detects doublets in single-cell RNA sequencing data with the 'DoubletFinder' method of McGinnis, Murrow and Gartner (2019) \doi{10.1016/j.cels.2019.03.003}, reimplemented in 'Rust' to use less memory and time. Provides artificial doublet simulation, exact nearest-neighbour search and pANN (proportion of artificial nearest neighbours) scoring, and reproduces 'DoubletFinder' scores exactly.
+Detects doublets in single-cell RNA sequencing data with the 'DoubletFinder' method of McGinnis, Murrow and Gartner (2019) \doi{10.1016/j.cels.2019.03.003}, implemented in 'Rust' to use less memory and time. Provides artificial doublet simulation, exact nearest-neighbour search and pANN (proportion of artificial nearest neighbours) scoring, and reproduces 'DoubletFinder' scores exactly.
 }
 \seealso{
 Useful links:
@@ -18,6 +18,11 @@ Useful links:
 }
 \author{
 \strong{Maintainer}: Mayank Gandhi \email{135.mayankgandhi@gmail.com} [copyright holder]
+
+Authors:
+\itemize{
+  \item Mayank Gandhi \email{135.mayankgandhi@gmail.com} [copyright holder]
+}
 
 Other contributors:
 \itemize{

@@ -1,3 +1,14 @@
+## Resubmission
+
+This is a resubmission. The first submission failed to install on
+r-devel-windows-x86_64: after the library built, the install ran a helper
+program that regenerates R/extendr-wrappers.R, and it could not be executed
+there ("not a valid Win32 application"). That file is now generated during
+development and shipped with the package, so the install only builds the
+library. I also removed the extended file attributes that caused the
+"unknown extended header keyword" tar messages, and reworded the
+Description to avoid "reimplemented".
+
 ## Submission
 
 This is a new submission.
@@ -10,7 +21,8 @@ This is a new submission.
 
 Possibly misspelled words in DESCRIPTION: "pANN" is the method's score
 (proportion of artificial nearest neighbours), defined in the Description;
-McGinnis, Murrow and Gartner are the authors of the cited paper.
+McGinnis, Murrow and Gartner are the authors of the cited paper. All are
+spelled correctly.
 
 ## Rust
 

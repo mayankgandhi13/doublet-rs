@@ -9,7 +9,7 @@ Authors@R: c(
   )
 Description: Detects doublets in single-cell RNA sequencing data with the
     'DoubletFinder' method of McGinnis, Murrow and Gartner (2019)
-    <doi:10.1016/j.cels.2019.03.003>, reimplemented in 'Rust' to use less
+    <doi:10.1016/j.cels.2019.03.003>, implemented in 'Rust' to use less
     memory and time. Provides artificial doublet simulation, exact
     nearest-neighbour search and pANN (proportion of artificial nearest
     neighbours) scoring, and reproduces 'DoubletFinder' scores exactly.
@@ -19,7 +19,6 @@ BugReports: https://github.com/mayankgandhi13/doublet-rs/issues
 SystemRequirements: Cargo (Rust's package manager), rustc >= 1.71
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.3
 Imports:
     graphics,
     KernSmooth,
@@ -35,3 +34,4 @@ Suggests:
     testthat (>= 3.0.0)
 VignetteBuilder: knitr
 Config/testthat/edition: 3
+Config/roxygen2/version: 8.1.0
