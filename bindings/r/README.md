@@ -42,9 +42,13 @@ and scripts are in the
 
 ## Installation
 
-Installing from source needs the Rust toolchain (rustc >= 1.71), available
-from <https://rustup.rs>. The package shares its Rust code with the rest of
-the repository, so install from a clone:
+```r
+install.packages("doubletrs")
+```
+
+Binary packages from CRAN need no extra tools. Building from source, or
+installing the development version, needs the Rust toolchain
+(rustc >= 1.71) from <https://rustup.rs>:
 
 ```sh
 git clone https://github.com/mayankgandhi13/doublet-rs

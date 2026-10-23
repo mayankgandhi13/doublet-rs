@@ -1,6 +1,6 @@
 # doublet-rs
 
-> 🚧 **Status: Submitted to CRAN.** The R package `doubletrs` 0.1.0 was submitted to CRAN on 2026-09-30 and is awaiting review. It reproduces DoubletFinder's scores exactly on 16 benchmark datasets (see [Validation](#validation)). Memory benchmarks are next.
+> ✅ **On CRAN.** The R package [`doubletrs`](https://CRAN.R-project.org/package=doubletrs) 0.1.0 was published on CRAN on 2026-10-16: `install.packages("doubletrs")`. It reproduces DoubletFinder's scores exactly on 16 benchmark datasets (see [Validation](#validation)). Memory benchmarks are next.
 
 A memory-efficient Rust reimplementation of the [DoubletFinder](https://github.com/chris-mcginnis-ucsf/DoubletFinder) core engine for detecting doublets in single-cell RNA-seq data, with bindings for R and Python.
 
@@ -79,7 +79,13 @@ Parent cells for artificial doublets are drawn with the same R random number cal
 
 Lower-level functions work with any preprocessing pipeline: `simulate_doublets()`, `find_neighbors()` and `compute_pann()`. Every function takes a `threads` argument, defaulting to `doubletrs_threads()` (all cores, or `options(doubletrs.threads = n)`).
 
-To install from a clone (needs Rust >= 1.71):
+Install from CRAN:
+
+```r
+install.packages("doubletrs")
+```
+
+To install the development version from a clone (needs Rust >= 1.71):
 
 ```sh
 R CMD INSTALL bindings/r
@@ -190,7 +196,7 @@ flowchart TD
 - [x] R binding (extendr)
 - [x] DoubletFinder-compatible R interface (`doubletFinder()`, `paramSweep()`, `summarizeSweep()`, `find.pK()`, `modelHomotypic()`)
 - [x] CRAN-ready package: vendored crates, rustc >= 1.71, `R CMD check --as-cran` on Linux, macOS and Windows
-- [x] Submit to CRAN (0.1.0 submitted 2026-09-30, awaiting review)
+- [x] Published on CRAN (0.1.0, 2026-10-16)
 - [ ] Memory benchmark vs. DoubletFinder
 - [ ] Python binding (PyO3)
 - [ ] Write-up of results
